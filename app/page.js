@@ -1,69 +1,133 @@
-import Image from "next/image";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import jwt from "jsonwebtoken";
+import { Suspense } from "react";
 
-export default function Home() {
+async function getUser() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("token")?.value;
+  if (!token) return null;
+
+  try {
+    return jwt.verify(token, process.env.JWT_SECRET);
+  } catch {
+    return null;
+  }
+}
+
+async function AuthRedirect() {
+  const user = await getUser();
+
+  if (user) {
+    redirect(user.role === "ADMIN" ? "/admin/tickets" : "/author/books");
+  }
+
+  return null;
+}
+
+const AUTHOR_FEATURES = [
+  "See all your books with sales and royalty details",
+  "Raise a support query in under a minute",
+  "Track replies from our team live, no refresh needed",
+];
+
+const TEAM_FEATURES = [
+  "One queue for every author query, sorted by urgency",
+  "AI sorts each ticket by category and priority",
+  "AI drafts a reply using the author's own book data",
+];
+
+const DEMO_ACCOUNTS = [
+  { role: "Author", email: "priya.sharma@email.com", password: "Author@123" },
+  { role: "Admin", email: "admin@bookleaf.com", password: "Admin@123" },
+];
+
+function FeatureCard({ title, description, features, buttonLabel, dark }) {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.js
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+    <div className="bg-white rounded-2xl shadow p-8 flex flex-col">
+      <h2 className="text-xl font-bold text-gray-900">{title}</h2>
+      <p className="text-sm text-gray-500 mt-1">{description}</p>
+
+      <ul className="mt-5 space-y-3 flex-1">
+        {features.map((feature) => (
+          <li key={feature} className="flex gap-3 text-sm text-gray-700">
+            <span className="text-green-600 font-bold">✓</span>
+            {feature}
+          </li>
+        ))}
+      </ul>
+
+      <Link
+        href="/login"
+        className={`mt-6 text-center rounded-lg py-2.5 font-medium text-white ${
+          dark
+            ? "bg-gray-900 hover:bg-gray-700"
+            : "bg-blue-600 hover:bg-blue-700"
+        }`}
+      >
+        {buttonLabel}
+      </Link>
     </div>
+  );
+}
+
+export default async function HomePage() {
+  return (
+    <main className="min-h-screen bg-gray-50">
+      <Suspense fallback={null}>
+        <AuthRedirect />
+      </Suspense>
+      <section className="max-w-4xl mx-auto px-4 pt-20 pb-12 text-center">
+        <p className="text-sm font-semibold text-blue-600 tracking-wide uppercase">
+          BookLeaf Publishing
+        </p>
+        <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mt-3">
+          Author Support Portal
+        </h1>
+        <p className="text-lg text-gray-600 mt-4 max-w-2xl mx-auto">
+          Questions about royalties, book status, ISBNs or printing? Get clear,
+          specific answers from the BookLeaf team, faster.
+        </p>
+      </section>
+
+      <section className="max-w-4xl mx-auto px-4 grid gap-6 md:grid-cols-2">
+        <FeatureCard
+          title="For Authors"
+          description="Your books, your royalties, your queries in one place."
+          features={AUTHOR_FEATURES}
+          buttonLabel="Author login"
+        />
+        <FeatureCard
+          title="For the BookLeaf Team"
+          description="Handle author queries faster and more consistently."
+          features={TEAM_FEATURES}
+          buttonLabel="Team login"
+          dark
+        />
+      </section>
+
+      <section className="max-w-4xl mx-auto px-4 py-12">
+        <div className="bg-blue-50 border border-blue-100 rounded-2xl p-6">
+          <p className="text-sm font-semibold text-gray-900">Demo accounts</p>
+          <p className="text-xs text-gray-500 mt-1">
+            Use these to explore both portals. Every author uses the same
+            password.
+          </p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {DEMO_ACCOUNTS.map((account) => (
+              <div
+                key={account.role}
+                className="bg-white rounded-lg px-4 py-3 text-sm"
+              >
+                <p className="font-medium text-gray-900">{account.role}</p>
+                <p className="text-gray-600">{account.email}</p>
+                <p className="text-gray-600">{account.password}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    </main>
   );
 }
